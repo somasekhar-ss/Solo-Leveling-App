@@ -36,42 +36,17 @@ console.log('[Config] Environment variables loaded successfully');
 console.log('[Config] MONGO_URI exists:', !!process.env.MONGO_URI);
 console.log('[Config] JWT_SECRET exists:', !!process.env.JWT_SECRET);
 
-// EMERGENCY FIX: Force mongoose to use latest connection method
+// ULTRA CLEAN MongoDB connection - NO mongoose settings at all
 const mongoose = require('mongoose');
-
-// Clear any existing mongoose configuration
-mongoose.set('strictQuery', false);
-mongoose.set('bufferCommands', false);
-mongoose.set('bufferMaxEntries', 0);
 
 const initializeDatabase = async () => {
     try {
-        console.log('[Database] EMERGENCY: Attempting clean MongoDB connection...');
-        
-        // Force disconnect any existing connections
-        if (mongoose.connection.readyState !== 0) {
-            await mongoose.disconnect();
-        }
-        
-        // Connect with explicit modern options
-        await mongoose.connect(process.env.MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
-        
+        console.log('[Database] Attempting ultra-clean MongoDB connection...');
+        await mongoose.connect(process.env.MONGO_URI);
         console.log('[Database] SUCCESS: MongoDB connected!');
     } catch (error) {
-        console.error('[Database] EMERGENCY ERROR:', error.message);
-        
-        // Last resort: try with zero options
-        try {
-            console.log('[Database] Trying zero-config connection...');
-            await mongoose.connect(process.env.MONGO_URI);
-            console.log('[Database] SUCCESS: Zero-config connection worked!');
-        } catch (finalError) {
-            console.error('[Database] FINAL ERROR:', finalError.message);
-            process.exit(1);
-        }
+        console.error('[Database] Connection failed:', error.message);
+        process.exit(1);
     }
 };
 
