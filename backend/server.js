@@ -10,7 +10,28 @@ const { Server } = require("socket.io"); // Import Server from socket.io
 const Message = require('./models/Message');
 
 dotenv.config();
-connectDB();
+
+// Enhanced database connection with retry logic
+const initializeDatabase = async () => {
+    let retries = 5;
+    while (retries > 0) {
+        try {
+            await connectDB();
+            console.log('[Database] Successfully connected to MongoDB');
+            break;
+        } catch (error) {
+            console.error(`[Database] Connection failed. Retries left: ${retries - 1}`);
+            retries--;
+            if (retries === 0) {
+                console.error('[Database] Failed to connect after 5 attempts. Exiting...');
+                process.exit(1);
+            }
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+        }
+    }
+};
+
+initializeDatabase();
 
 const app = express();
 const server = http.createServer(app); // Create an HTTP server from our Express app
@@ -22,7 +43,13 @@ const io = new Server(server, {
             ? [process.env.FRONTEND_URL || "https://your-app-name.railway.app"]
             : "*",
         methods: ["GET", "POST"]
-    }
+    },
+    // Production optimizations
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    upgradeTimeout: 30000,
+    maxHttpBufferSize: 1e6, // 1MB
+    allowEIO3: true
 });
 
 app.use(cors({
@@ -30,7 +57,29 @@ app.use(cors({
         ? [process.env.FRONTEND_URL || "https://your-app-name.railway.app"]
         : "*"
 }));
-app.use(express.json());
+
+// Security and performance middleware
+app.use(express.json({ limit: '10mb' })); // Limit request size
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request timeout middleware
+app.use((req, res, next) => {
+    res.setTimeout(30000, () => {
+        console.error('[Timeout] Request timeout:', req.url);
+        res.status(408).json({ error: 'Request timeout' });
+    });
+    next();
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage()
+    });
+});
 
 // Your existing API Routes from the Gist
 app.use('/api/auth', require('./routes/auth'));
@@ -51,20 +100,39 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', '
 const onlineUsers = new Set();
 
 io.on('connection', (socket) => {
+    console.log(`[Socket.IO] Client connected: ${socket.id}`);
+    
+    // Error handling for socket
+    socket.on('error', (error) => {
+        console.error(`[Socket.IO] Socket error for ${socket.id}:`, error);
+    });
+    
     // Clients may register their userId after connecting so server can target private messages
     socket.on('register', (userId) => {
-        if (userId) {
-            socket.userId = userId;
-            onlineUsers.add(userId);
-            socket.broadcast.emit('userOnline', userId);
-            // Send current online users to the newly connected user
-            socket.emit('onlineUsers', Array.from(onlineUsers));
+        try {
+            if (userId) {
+                socket.userId = userId;
+                onlineUsers.add(userId);
+                socket.broadcast.emit('userOnline', userId);
+                // Send current online users to the newly connected user
+                socket.emit('onlineUsers', Array.from(onlineUsers));
+                console.log(`[Socket.IO] User registered: ${userId}`);
+            }
+        } catch (error) {
+            console.error('[Socket.IO] Error in register:', error);
         }
     });
 
     // Accept messages; if payload includes recipientId, treat as private
-    socket.on('sendMessage', async ({ userId, username, text, recipientId }) => {
+    socket.on('sendMessage', async (data) => {
         try {
+            const { userId, username, text, recipientId } = data || {};
+            
+            if (!userId || !username || !text) {
+                console.error('[Socket.IO] Invalid message data:', data);
+                return;
+            }
+            
             const messageData = { user: { id: userId, username }, text };
             if (recipientId) messageData.recipientId = recipientId;
 
@@ -77,24 +145,58 @@ io.on('connection', (socket) => {
             if (recipientId) {
                 // Send to recipient socket(s) and sender only
                 const recipientSockets = Array.from(io.sockets.sockets.values()).filter(s => s.userId && s.userId.toString() === recipientId.toString());
-                recipientSockets.forEach(s => s.emit('privateMessage', message));
+                recipientSockets.forEach(s => {
+                    try {
+                        s.emit('privateMessage', message);
+                    } catch (err) {
+                        console.error('[Socket.IO] Error sending to recipient:', err);
+                    }
+                });
                 socket.emit('privateMessage', message);
             } else {
                 io.emit('newMessage', message);
             }
         } catch (error) {
             console.error('[Socket.IO] Error saving message:', error);
+            socket.emit('messageError', { error: 'Failed to send message' });
         }
     });
 
-    socket.on('disconnect', () => {
-        if (socket.userId) {
-            onlineUsers.delete(socket.userId);
-            socket.broadcast.emit('userOffline', socket.userId);
+    socket.on('disconnect', (reason) => {
+        try {
+            console.log(`[Socket.IO] Client disconnected: ${socket.id}, reason: ${reason}`);
+            if (socket.userId) {
+                onlineUsers.delete(socket.userId);
+                socket.broadcast.emit('userOffline', socket.userId);
+            }
+        } catch (error) {
+            console.error('[Socket.IO] Error in disconnect:', error);
         }
     });
 });
 
+// Error handling for uncaught exceptions
+process.on('uncaughtException', (error) => {
+    console.error('[CRITICAL] Uncaught Exception:', error);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[CRITICAL] Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('[System] SIGTERM received, shutting down gracefully');
+    server.close(() => {
+        console.log('[System] Process terminated');
+        process.exit(0);
+    });
+});
+
 const PORT = process.env.PORT || 5001;
-// IMPORTANT: We now listen on the 'server' object, not the 'app' object
-server.listen(PORT, () => console.log(`[System] Backend server active on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`[System] Backend server active on port ${PORT}`);
+    console.log(`[System] Environment: ${process.env.NODE_ENV || 'development'}`);
+});
