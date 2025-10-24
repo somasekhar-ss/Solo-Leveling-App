@@ -11,12 +11,12 @@ const connectDB = async () => {
     console.log('[Database] MONGO_URI length:', process.env.MONGO_URI.length);
     
     const conn = await mongoose.connect(process.env.MONGO_URI, {
-      // Production-ready options
+      // Production-ready options (updated for latest Mongoose)
       maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+      serverSelectionTimeoutMS: 10000, // Keep trying to send operations for 10 seconds
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-      bufferMaxEntries: 0, // Disable mongoose buffering
-      bufferCommands: false, // Disable mongoose buffering
+      connectTimeoutMS: 10000, // Give up initial connection after 10 seconds
+      maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
     });
     
     // Handle connection events
