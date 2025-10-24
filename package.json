@@ -1,0 +1,13 @@
+{
+  "name": "solo-leveling-app",
+  "version": "1.0.0",
+  "description": "Solo Leveling RPG App",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "cd backend && npm install && npm start",
+    "build": "cd backend && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

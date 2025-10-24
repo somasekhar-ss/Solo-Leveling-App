@@ -1,0 +1,1776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:,">
+    <style>
+        :root { --glow-blue: #00aaff; --glow-red: #ff0033; --glow-gold: #FFD700; --glow-purple: #9d00ff; --glow-green: #00ff6a; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background-color: #0A0A0F; color: #E0E0E0; position: relative; } 
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        /* Smoky blue aura effect */
+        .animated-bg {
+            background-color: #0A0A0F; /* The deep dark blue base */
+        }
+
+
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .rarity-common { border-color: #6b7280; }
+        .rarity-uncommon { border-color: var(--glow-green); box-shadow: 0 0 5px var(--glow-green); }
+        .rarity-rare { border-color: var(--glow-blue); box-shadow: 0 0 8px var(--glow-blue); }
+        .rarity-instant { border-color: var(--glow-red); box-shadow: 0 0 12px var(--glow-red); animation: pulse 1.5s infinite; }
+        .rarity-stat { border-color: var(--glow-purple); box-shadow: 0 0 6px var(--glow-purple); }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .form-input { background-color: rgba(23, 23, 33, 0.7); backdrop-filter: blur(5px); border: 1px solid #374151; transition: border-color 0.3s; }
+        .form-input:focus { border-color: var(--glow-blue); outline: none; }
+        .focus-mode-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: fadeIn 0.3s ease-out; }
+        .start-animation { position: absolute; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 15vw; color: white; opacity: 0; animation: start-anim 1.5s ease-in-out forwards; }
+        @keyframes start-anim { 0% { opacity: 1; transform: scale(0.5); text-shadow: 0 0 10px #fff; } 50% { opacity: 1; transform: scale(1.2); text-shadow: 0 0 30px var(--glow-blue); } 99% { opacity: 0; transform: scale(2); } 100% { opacity: 0; display: none; } }
+        .focus-content { animation: fadeIn 0.5s ease-out 1.5s forwards; opacity: 0; }
+
+        /* Solo Leveling SYSTEM notification bar styles */
+        .system-notify-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10001; width: min(480px, calc(100% - 2rem)); pointer-events: none; }
+    .system-notify { background: transparent; border: 2px solid #00aaff; box-shadow: 0 0 24px rgba(0,170,255,0.5), 0 0 2px rgba(0,170,255,0.8); border-radius: 0.7rem; padding: 0; display: flex; flex-direction: column; transform: scale(0.8); opacity: 0; pointer-events: auto; overflow: hidden; min-width: 320px; }
+    .system-divider { width: 80%; height: 2px; background: linear-gradient(90deg, #00aaff 0%, #0a0a0f 100%); border-radius: 2px; margin: 0.3rem 0 0.5rem 0; opacity: 0.7; }
+    .system-message-box { background: rgba(20,24,36,0.85); border: 1px solid #00aaff44; border-radius: 0.5rem; padding: 0.5rem 1rem; margin-top: 0.2rem; box-shadow: 0 2px 12px #00aaff22; text-align: center; }
+    .system-mission-title { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 1.2rem; color: #fff; letter-spacing: 0.04em; margin-bottom: 0.2rem; }
+    .system-mission-reward { font-size: 1rem; color: #ffd700; font-family: 'Inter', sans-serif; margin-top: 0.1rem; }
+        .system-notify.show { animation: systemSlideDown 0.45s cubic-bezier(.2,.9,.2,1) forwards; }
+        .system-notify.hide { animation: systemSlideUp 0.35s ease-in forwards; }
+        @keyframes systemSlideDown { 0% { transform: translateY(-140%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        @keyframes systemSlideUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-120%); opacity: 0; } }
+
+        
+    /* --- Styles for SOLO LEVELING NOTIFICATION --- */
+
+    /* The semi-transparent overlay */
+    .solo-notification-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, rgba(0,0,0,0.85), rgba(0,0,0,0.75)), radial-gradient(circle at 25% 25%, rgba(0,170,255,0.06) 0%, transparent 60%), radial-gradient(circle at 75% 75%, rgba(0,170,255,0.06) 0%, transparent 60%);
+      z-index: 10000;
+      opacity: 1;
+      transition: opacity 0.35s ease-in;
+    }
+
+    /* New class to hide body overflow (prevents layout shift) */
+    body.no-scroll {
+        overflow: hidden; 
+    }
+
+    /* Make the overlay fade out with the box */
+    .solo-notification-overlay:has(.hide) {
+        opacity: 0;
+        pointer-events: none; 
+    }
+
+    /* New content styles */
+    .solo-header {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      border-bottom: 1px solid rgba(0, 170, 255, 0.4);
+      padding: 8px 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 0 0 5px rgba(0, 170, 255, 0.7);
+    }
+
+    .solo-icon {
+      border: 1px solid #fff;
+      border-radius: 50%;
+      padding: 0px 6px;
+      margin-right: 10px;
+      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Toned down text glitch */
+    .solo-body {
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      padding: 24px 16px 20px;
+      font-family: 'Orbitron', sans-serif;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+      animation: text-glitch 0.3s steps(3, jump-end) infinite;
+      position: relative;
+    }
+
+    /* New Glitch Effect for the Box */
+    .solo-glitch-box {
+        position: relative; 
+    }
+
+    /* Toned down border glitch */
+    .solo-glitch-box::before,
+    .solo-glitch-box::after {
+      content: '';
+      position: absolute;
+      top: -2px; 
+      left: -2px;
+      width: calc(100% + 4px); 
+      height: calc(100% + 4px);
+      background: transparent;
+      border: 2px solid #ff0077;
+      box-shadow: 0 0 15px #ff0077, inset 0 0 5px #ff0077;
+      animation: glitch-anim 0.5s infinite alternate;
+    }
+
+    .solo-glitch-box::after {
+      border-color: #00ffea; 
+      box-shadow: 0 0 15px #00ffea, inset 0 0 5px #00ffea; 
+      animation: glitch-anim 0.4s infinite alternate-reverse;
+    }
+
+    /* Toned down keyframes for border */
+    @keyframes glitch-anim {
+      0% {
+        transform: translate(2px, -1px);
+        clip-path: polygon(0 10%, 100% 10%, 100% 15%, 0 15%);
+      }
+      25% {
+        transform: translate(-2px, 1px);
+        clip-path: polygon(0 40%, 100% 40%, 100% 45%, 0 45%);
+      }
+      50% {
+        transform: translate(1px, -2px);
+        clip-path: polygon(0 75%, 100% 75%, 100% 80%, 0 80%);
+      }
+      75% {
+        transform: translate(-1px, 2px);
+        clip-path: polygon(0 50%, 100% 50%, 100% 55%, 0 55%);
+      }
+      100% {
+        transform: translate(2px, -1px);
+        clip-path: polygon(0 90%, 100% 90%, 100% 95%, 0 95%);
+      }
+    }
+
+    /* Toned down keyframes for text glitch */
+    @keyframes text-glitch {
+      0%, 100%, 50% {
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+        transform: translate(0, 0);
+      }
+      10% {
+        text-shadow: 2px 0 #00aaff, -2px 0 #ff0077;
+        transform: translate(-1px, 0);
+      }
+      20% {
+        text-shadow: -2px 0 #00aaff, 2px 0 #ff0077;
+        transform: translate(1px, 0);
+      }
+      30% {
+        text-shadow: 0 2px #00aaff, 0 -2px #ff0077;
+        transform: translate(0, 1px);
+      }
+      40% {
+        text-shadow: 0 -2px #00aaff, 0 2px #ff0077;
+        transform: translate(0, -1px);
+      }
+    }
+    /* --- END OF Styles for SOLO LEVELING NOTIFICATION --- */
+
+
+
+
+
+
+
+    </style>
+</head>
+<body class="animated-bg">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef, createContext, useContext, useCallback } = React;
+        const API_URL = 'http://localhost:5001/api';
+        const SOCKET_URL = 'http://localhost:5001';
+        const api = axios.create({ baseURL: API_URL });
+        api.interceptors.request.use(config => { const token = localStorage.getItem('token'); if (token) config.headers['x-auth-token'] = token; return config; }, error => Promise.reject(error));
+        const AuthContext = createContext();
+    const AuthProvider = ({ children }) => { const [authState, setAuthState] = useState({ token: localStorage.getItem('token'), isAuthenticated: null, loading: true, user: null }); const loadUser = useCallback(async () => { if (localStorage.getItem('token')) { try { const res = await api.get('/auth/me'); setAuthState(prev => ({ ...prev, isAuthenticated: true, user: res.data, loading: false })); } catch (err) { localStorage.removeItem('token'); setAuthState({ token: null, isAuthenticated: false, loading: false, user: null }); } } else { setAuthState({ token: null, isAuthenticated: false, loading: false, user: null }); } }, []); useEffect(() => { loadUser(); }, [loadUser]); const login = async (email, password) => { const res = await api.post('/auth/login', { email, password }); localStorage.setItem('token', res.data.token); await loadUser(); }; const register = async (username, email, password) => { const res = await api.post('/auth/register', { username, email, password }); localStorage.setItem('token', res.data.token); await loadUser(); }; const logout = () => { localStorage.removeItem('token'); setAuthState({ token: null, isAuthenticated: false, loading: false, user: null }); }; return ( <AuthContext.Provider value={{ ...authState, login, register, logout, setUser: (user) => setAuthState(prev => ({...prev, user})) }}> {children} </AuthContext.Provider> ); };
+        const useAuth = () => useContext(AuthContext);
+        
+        // MODIFIED: SystemMessage CSS for positioning
+        const SystemMessage = ({ message, type = 'info', onDismiss }) => { 
+            if (!message) return null; 
+            const styles = { info: 'border-blue-500/50 text-blue-300', success: 'border-green-500/50 text-green-300', error: 'border-red-500/50 text-red-300' }; 
+            return ( 
+                <div className={`relative mb-4 max-w-sm bg-black/70 backdrop-blur-sm border ${styles[type]} rounded-lg p-4 z-[110] fade-in cursor-pointer`} onClick={onDismiss}> 
+                    <p className="font-semibold">{message.title}</p> 
+                    <p className="text-sm">{message.body}</p> 
+                </div> 
+            ); 
+        };
+        
+        const LoadingSpinner = ({ text = "System Initializing..." }) => ( <div className="min-h-screen flex items-center justify-center font-orbitron text-blue-400 text-2xl text-glow-blue"> <svg className="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle> <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg> {text} </div> );
+        const AuthPage = () => { const [isLogin, setIsLogin] = useState(true); const [formData, setFormData] = useState({ username: '', email: '', password: '' }); const [error, setError] = useState(''); const { login, register } = useAuth(); const [loading, setLoading] = useState(false); const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value }); const onSubmit = async e => { e.preventDefault(); setError(''); setLoading(true); try { if (isLogin) await login(formData.email, formData.password); else await register(formData.username, formData.email, formData.password); } catch (err) { setError(err.response?.data?.msg || 'An unknown error occurred.'); } finally { setLoading(false); } }; return ( <div className="min-h-screen flex items-center justify-center p-4"> <div className="w-full max-w-md bg-black/30 backdrop-blur-lg border border-blue-500/20 rounded-xl p-8 fade-in"> <h1 className="font-orbitron text-4xl text-center text-blue-300 mb-8 text-glow-blue">{isLogin ? 'System Login' : 'Register Hunter'}</h1> {error && <p className="bg-red-900/50 text-red-300 p-3 rounded-md mb-4 text-center border border-red-500/50">{error}</p>} <form onSubmit={onSubmit} className="space-y-6"> {!isLogin && <input type="text" name="username" value={formData.username} onChange={onChange} placeholder="Username" required className="w-full p-3 rounded-md form-input"/>} <input type="email" name="email" value={formData.email} onChange={onChange} placeholder="Email" required className="w-full p-3 rounded-md form-input"/> <input type="password" name="password" value={formData.password} onChange={onChange} placeholder="Password" required minLength="6" className="w-full p-3 rounded-md form-input"/> <button type="submit" disabled={loading} className="w-full font-orbitron text-lg p-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 rounded-md transition duration-300 glow-blue text-white flex justify-center items-center h-14"> {loading ? <LoadingSpinner text=""/> : isLogin ? 'Log In' : 'Register'} </button> </form> <p className="text-center mt-6 text-gray-400"> <a href="#" onClick={(e) => { e.preventDefault(); setIsLogin(!isLogin); setError('')}} className="hover:text-blue-300 transition-colors"> {isLogin ? 'Need to register an account?' : 'Already have an account?'} </a> </p> </div> </div> ); };
+        const CreateMissionForm = ({ onMissionCreated }) => { const [description, setDescription] = useState(''); const [timeLimit, setTimeLimit] = useState(60); const handleSubmit = async (e) => { e.preventDefault(); if (!description.trim()) return; try { const res = await api.post('/missions', { description, timeLimit }); onMissionCreated(res.data); setDescription(''); setTimeLimit(60); } catch (err) { console.error("Failed to create mission:", err); } }; return ( <form onSubmit={handleSubmit} className="bg-black/20 p-4 rounded-lg border border-gray-700/50 space-y-3"> <input type="text" placeholder="Enter new mission description..." value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-3 rounded-md form-input text-lg" required /> <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center"> <label className="flex flex-col text-sm text-gray-400">Time Limit (Minutes)<input type="number" value={timeLimit} onChange={(e) => setTimeLimit(e.target.value)} className="w-full p-2 rounded-md form-input mt-1" min="1" /></label> <button type="submit" className="w-full font-orbitron p-2 bg-blue-600/80 hover:bg-blue-500/80 rounded-md transition duration-300 glow-blue text-white h-11 self-end">Add Mission</button> </div> </form> ); };
+        const MissionTimer = ({ mission, onComplete }) => { const [timeLeft, setTimeLeft] = useState(0); useEffect(() => { if (mission.status !== 'InProgress') return; const calculateTimeLeft = () => { const startTime = new Date(mission.startTime).getTime(); const now = new Date().getTime(); const elapsed = Math.floor((now - startTime) / 1000); return mission.timeLimit - elapsed; }; setTimeLeft(calculateTimeLeft()); const interval = setInterval(() => { const newTimeLeft = calculateTimeLeft(); if (newTimeLeft < 0) { clearInterval(interval); onComplete(mission._id); } setTimeLeft(newTimeLeft); }, 1000); return () => clearInterval(interval); }, [mission]); const formatTime = (seconds) => { if (seconds < 0) seconds = 0; const h = Math.floor(seconds / 3600).toString().padStart(2, '0'); const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0'); const s = Math.floor(seconds % 60).toString().padStart(2, '0'); return `${h}:${m}:${s}`; }; return <span className="font-orbitron text-7xl lg:text-9xl text-blue-300">{formatTime(timeLeft)}</span>; };
+        const FocusMode = ({ mission, onComplete }) => ( <div className="focus-mode-overlay"> <div className="start-animation">START</div> <div className="focus-content text-center flex flex-col items-center gap-8"> <p className="text-gray-400 font-orbitron">MISSION IN PROGRESS</p> <h1 className="text-4xl lg:text-6xl max-w-4xl">{mission.description}</h1> <div className="my-8"> <MissionTimer mission={mission} onComplete={onComplete} /> </div> <button onClick={() => onComplete(mission._id)} className="font-orbitron text-2xl px-12 py-4 bg-blue-600 hover:bg-blue-500 rounded-lg transition-transform hover:scale-105">Complete Mission</button> </div> </div> );
+        
+        const QuestsView = ({ missions, onComplete, onStart, onDelete, onMissionCreated, user }) => { 
+            const systemMissions = missions.filter(m => m.source === 'System'); 
+            const userMissions = missions.filter(m => m.source === 'User'); 
+            const statMissions = systemMissions.filter(m => m.rarity === 'Stat');
+
+
+            
+            const getStatIcon = (statType) => {
+                const icons = {
+                    strength: '💪',
+                    intelligence: '🧠', 
+                    discipline: '🧘',
+                    vitality: '❤️'
+                };
+                return icons[statType] || '⚡';
+            };
+            
+
+            
+            return ( 
+                <> 
+                    <div className="mb-8"> 
+                        <h2 className="font-orbitron text-3xl text-blue-300 mb-4 text-glow-blue">Daily Missions</h2> 
+                        
+                        {/* Stat-based quests section */}
+                        <div className="mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {statMissions.map(m => (
+                                    <div key={m._id} onClick={() => m.status === 'Pending' && onComplete(m._id)} className={`p-4 rounded-lg border-l-4 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${m.status === 'Completed' ? 'bg-green-800/20 border-green-400 text-gray-500 cursor-default' : 'hover:bg-gray-800/60 cursor-pointer border-blue-400'}`} style={m.status !== 'Completed' ? {backgroundColor: '#0A1628', borderLeftColor: '#00aaff'} : {}}>
+                                        <div className="min-w-0 flex items-center gap-3">
+                                            <span className="text-2xl">{getStatIcon(m.statType)}</span>
+                                            <div className="min-w-0 flex-grow">
+                                                <p className={`text-lg break-words ${m.status === 'Completed' && 'line-through'}`}>{m.description}</p>
+                                                <p className="text-xs text-gray-400 font-mono">REWARD: {m.expReward} EXP, {m.pointReward} P</p>
+                                                <p className="text-xs text-purple-300 capitalize">{m.statType} Training</p>
+                                            </div>
+                                        </div>
+                                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${m.status === 'Completed' ? 'bg-green-500 border-green-400' : 'border-purple-400'}`}>
+                                            {m.status === 'Completed' && <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                    </div>
+                    
+
+                    
+ 
+                    
+                    <div> 
+                        <h2 className="font-orbitron text-3xl text-blue-300 mb-4 text-glow-blue">Personal Missions</h2> 
+                        <CreateMissionForm onMissionCreated={onMissionCreated} /> 
+                        <div className="space-y-3"> 
+                            {userMissions.length === 0 && <p className="text-center text-gray-500 py-4">No personal missions assigned. Add one to begin.</p>} 
+                            {userMissions.map(m => ( 
+                                <div key={m._id} className={`p-4 rounded-lg border-l-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-gray-700 ${m.status === 'InProgress' && 'border-blue-500 animate-pulse'}`}> 
+                                    <div className="min-w-0 flex-grow"> 
+                                        <p className={`text-lg truncate ${m.status === 'Completed' || m.status === 'Failed' ? 'line-through' : ''}`}>{m.description}</p> 
+                                        {m.status === 'Completed' && <p className="text-xs text-green-400 font-mono">COMPLETED | +{m.expReward} EXP, +{m.pointReward} P</p>} 
+                                        {m.status === 'Failed' && <p className="text-xs text-red-400 font-mono">FAILED | {m.pointReward} P</p>} 
+                                        {m.status === 'Pending' && <p className="text-xs text-gray-400 font-mono">TIME LIMIT: {m.timeLimit / 60} Minutes</p>} 
+                                    </div> 
+                                    <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto"> 
+                                        {m.status === 'Pending' && <> 
+                                            <button onClick={() => onStart(m._id)} className="w-1/2 sm:w-auto font-orbitron px-4 py-2 bg-green-600 hover:bg-green-500 rounded-md transition">Start</button> 
+                                            <button onClick={() => onDelete(m._id)} className="w-1/2 sm:w-auto font-orbitron px-4 py-2 bg-red-800/80 hover:bg-red-700/80 rounded-md transition">Delete</button> 
+                                        </>} 
+                                        {m.status === 'InProgress' && <> 
+                                            <MissionTimer mission={m} onComplete={onComplete} /> 
+                                            <button onClick={() => onComplete(m._id)} className="font-orbitron px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-md transition">Complete</button> 
+                                        </>} 
+                                    </div> 
+                                </div> 
+                            ))} 
+                        </div> 
+                    </div> 
+                </> 
+            ); 
+        };
+        const LeaderboardView = () => { const [leaderboard, setLeaderboard] = useState([]); useEffect(() => { const fetchLeaderboard = async () => { try { const res = await api.get('/leaderboard/daily'); setLeaderboard(res.data); } catch(err) { console.error("Failed to fetch leaderboard", err) } }; fetchLeaderboard(); }, []); return ( <> <h2 className="font-orbitron text-3xl text-yellow-300 mb-4 glow-gold">Daily Leaderboard</h2> <div className="space-y-2"> {leaderboard.map((player, index) => ( <div key={player._id} className="p-4 rounded-lg bg-black/20 border border-gray-700/50 flex items-center justify-between font-mono"> <div className="flex items-center gap-4"> <span className={`font-orbitron text-2xl w-8 text-center ${index === 0 ? 'text-yellow-300' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-yellow-600' : 'text-blue-400'}`}>{index + 1}</span> <div> <p className="text-lg">{player.username}</p> <p className="text-xs text-gray-500">Level {player.level}</p> </div> </div> <span className="font-orbitron text-xl text-blue-300">{player.dailyScore} P</span> </div> ))} </div> </> ); };
+        const InventoryView = ({ setSystemMessage }) => {
+            const { user, setUser } = useAuth();
+            const [shopItems, setShopItems] = useState([]);
+
+            useEffect(() => {
+                const fetchShopItems = async () => {
+                    try {
+                        const res = await api.get('/shop');
+                        setShopItems(res.data);
+                    } catch (err) {
+                        console.error('Failed to fetch shop items', err);
+                    }
+                };
+                fetchShopItems();
+            }, []);
+
+            const handleEquip = async (itemId) => {
+                try {
+                    const res = await api.post('/shop/equip', { itemId });
+                    setUser(res.data.user);
+                    setSystemMessage({ type: 'success', title: 'Equipped', body: res.data.msg });
+                } catch (err) {
+                    setSystemMessage({ type: 'error', title: 'Equip Failed', body: err.response?.data?.msg || 'An error occurred.' });
+                }
+            };
+
+            const getRankColor = (rank) => {
+                const colors = { E: 'text-gray-400', D: 'text-green-400', C: 'text-blue-400', B: 'text-purple-400', A: 'text-yellow-400', S: 'text-red-400', N: 'text-pink-400' };
+                return colors[rank] || 'text-white';
+            };
+
+            const ownedItems = user.inventory.map(inv => {
+                const shopItem = shopItems.find(item => item.itemId === inv.itemId);
+                return shopItem ? { 
+                    ...shopItem, 
+                    ...inv, 
+                    purchaseDate: inv.purchaseDate || '2024-01-15 14:30:00'
+                } : null;
+            }).filter(Boolean);
+
+            const groupedItems = ownedItems.reduce((acc, item) => {
+                if (!acc[item.rank || item.tier]) acc[item.rank || item.tier] = [];
+                acc[item.rank || item.tier].push(item);
+                return acc;
+            }, {});
+
+            const rankOrder = ['E', 'D', 'C', 'B', 'A', 'S', 'N'];
+
+            return (
+                <div>
+                    <h2 className="font-orbitron text-3xl text-purple-400 mb-4">Inventory</h2>
+                    <div className="space-y-6">
+                        {ownedItems.length === 0 ? (
+                            <p className="text-center text-gray-500 py-8">No items owned</p>
+                        ) : (
+                            Object.keys(groupedItems).sort((a, b) => rankOrder.indexOf(a) - rankOrder.indexOf(b)).map(rank => (
+                                <div key={rank}>
+                                    <h3 className={`font-orbitron text-xl mb-2 ${getRankColor(rank)}`}>{rank}-Tier</h3>
+                                    <div className="space-y-2">
+                                        {groupedItems[rank].map(item => (
+                                            <div key={item.itemId} className="p-3 bg-black/20 rounded-lg border border-gray-700/50">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex-grow">
+                                                        <h4 className="font-orbitron text-lg text-white">{item.name}</h4>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleEquip(item.itemId)}
+                                                        disabled={user.equippedTitle === item.name}
+                                                        className={`px-3 py-1 rounded-md font-orbitron text-xs ${user.equippedTitle === item.name ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500'}`}
+                                                    >
+                                                        {user.equippedTitle === item.name ? 'Equipped' : 'Equip'}
+                                                    </button>
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    Purchased: {new Date(item.purchaseDate).toLocaleDateString()} at {new Date(item.purchaseDate).toLocaleTimeString()}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const ShopView = ({ setSystemMessage }) => {
+            const { user, setUser } = useAuth();
+            const [shopItems, setShopItems] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const fetchShopItems = async () => {
+                    try {
+                        const res = await api.get('/shop');
+                        setShopItems(res.data);
+                    } catch (err) {
+                        console.error('Failed to fetch shop items', err);
+                        setSystemMessage({ type: 'error', title: 'Error', body: 'Failed to load shop items.' });
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+                fetchShopItems();
+            }, [setSystemMessage]);
+
+            const handleBuy = async (itemId) => {
+                try {
+                    const res = await api.post('/shop/buy', { itemId });
+                    setUser(res.data.user);
+                    setSystemMessage({ type: 'success', title: 'Purchase Successful', body: res.data.msg });
+                } catch (err) {
+                    setSystemMessage({ type: 'error', title: 'Purchase Failed', body: err.response?.data?.msg || 'An error occurred.' });
+                }
+            };
+
+            const getRankColor = (rank) => {
+                const colors = { E: 'text-gray-400', D: 'text-green-400', C: 'text-blue-400', B: 'text-purple-400', A: 'text-yellow-400', S: 'text-red-400', N: 'text-pink-400' };
+                return colors[rank] || 'text-white';
+            };
+
+            const handleEquip = async (itemId) => {
+                try {
+                    const res = await api.post('/shop/equip', { itemId });
+                    setUser(res.data.user);
+                    setSystemMessage({ type: 'success', title: 'Equipped', body: res.data.msg });
+                } catch (err) {
+                    setSystemMessage({ type: 'error', title: 'Equip Failed', body: err.response?.data?.msg || 'An error occurred.' });
+                }
+            };
+
+            const groupedItems = shopItems.reduce((acc, item) => {
+                if (!acc[item.rank || item.tier]) acc[item.rank || item.tier] = [];
+                acc[item.rank || item.tier].push(item);
+                return acc;
+            }, {});
+
+            if (loading) return <LoadingSpinner />;
+
+            const rankOrder = ['E', 'D', 'C', 'B', 'A', 'S', 'N'];
+
+            return (
+                <div>
+                    <h2 className="font-orbitron text-3xl text-red-400 mb-4">Shop</h2>
+                    <div className="space-y-6">
+
+                        
+                        {/* Titles Section */}
+                        {Object.keys(groupedItems).sort((a, b) => rankOrder.indexOf(a) - rankOrder.indexOf(b)).map(rank => (
+                            <div key={rank}>
+                                <h3 className={`font-orbitron text-2xl mb-2 ${getRankColor(rank)}`}>{rank}-Tier Titles</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {groupedItems[rank].map(item => {
+                                        const owned = user.inventory.some(inv => inv.itemId === item.itemId);
+                                        const canBuy = !owned && user.level >= (item.requiredLevel || 1) && user.points >= (item.price || item.cost);
+                                        return (
+                                            <div key={item.itemId || item.name} className="p-4 bg-black/20 rounded-lg border border-gray-700/50">
+                                                <h4 className="font-orbitron text-lg text-white">{item.name}</h4>
+                                                <p className="text-sm text-gray-400 mb-2">{item.description}</p>
+                                                <p className="text-xs text-yellow-300">Price: {item.price || item.cost} P{item.requiredLevel ? ` | Req. Level: ${item.requiredLevel}` : ''}</p>
+                                                {owned ? (
+                                                    <button
+                                                        onClick={() => handleEquip(item.itemId)}
+                                                        disabled={user.equippedTitle === item.name}
+                                                        className={`mt-2 px-4 py-2 rounded-md font-orbitron text-sm ${user.equippedTitle === item.name ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500'}`}
+                                                    >
+                                                        {user.equippedTitle === item.name ? 'Equipped' : 'Equip'}
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleBuy(item.itemId)}
+                                                        disabled={!canBuy}
+                                                        className={`mt-2 px-4 py-2 rounded-md font-orbitron text-sm ${canBuy ? 'bg-blue-600 hover:bg-blue-500' : 'bg-gray-600 cursor-not-allowed'}`}
+                                                    >
+                                                        {canBuy ? 'Buy' : (user.level < (item.requiredLevel || 1)) ? 'Level Too Low' : 'Not Enough Points'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // Friends management UI
+
+
+        const FriendsView = ({ setActiveTab, setSelectedFriend, setShowDMOverlay }) => {
+            const { user, setUser } = useAuth();
+            const [friends, setFriends] = useState([]);
+            const [newFriendName, setNewFriendName] = useState('');
+            const [suggestions, setSuggestions] = useState([]);
+            const [showSuggestions, setShowSuggestions] = useState(false);
+
+            const fetchFriends = async () => {
+                try {
+                    const res = await api.get('/friends');
+                    setFriends(res.data);
+                } catch (err) { console.error('Failed to fetch friends', err); }
+            };
+
+            useEffect(() => { fetchFriends(); }, []);
+
+            const searchUsers = async (query) => {
+                if (query.length < 1) {
+                    setSuggestions([]);
+                    setShowSuggestions(false);
+                    return;
+                }
+                try {
+                    const res = await api.get(`/friends/search/${query}`);
+                    setSuggestions(res.data || []);
+                    setShowSuggestions(true);
+                } catch (err) {
+                    console.error('Search error:', err);
+                    setSuggestions([]);
+                    setShowSuggestions(true);
+                }
+            };
+
+            const handleInputChange = (e) => {
+                const value = e.target.value;
+                setNewFriendName(value);
+                searchUsers(value);
+            };
+
+            const selectSuggestion = (username) => {
+                setNewFriendName(username);
+                setShowSuggestions(false);
+            };
+
+            const addFriend = async () => {
+                if (!newFriendName.trim()) return;
+                try {
+                    const res = await api.post('/friends', { username: newFriendName });
+                    setFriends(prev => [...prev, res.data.friend]);
+                    setNewFriendName('');
+                    setShowSuggestions(false);
+                } catch (err) { console.error('Add friend failed', err); }
+            };
+
+            const removeFriend = async (id) => {
+                try {
+                    await api.delete(`/friends/${id}`);
+                    setFriends(prev => prev.filter(f => f._id !== id));
+                } catch (err) { console.error('Remove friend failed', err); }
+            };
+
+            const messageFriend = (friend) => {
+                setSelectedFriend(friend);
+                setShowDMOverlay(true);
+            };
+
+            return (
+                <div>
+                    <h2 className="font-orbitron text-3xl text-pink-400 mb-4">Friends</h2>
+                    <div className="mb-4 relative">
+                        <div className="flex gap-2">
+                            <input 
+                                className="form-input p-2 rounded-md flex-grow" 
+                                placeholder="Friend's username" 
+                                value={newFriendName} 
+                                onChange={handleInputChange}
+                                onBlur={() => setTimeout(() => setShowSuggestions(false), 300)}
+                            />
+                            <button onClick={addFriend} className="px-4 py-2 bg-blue-600 rounded-md">Add</button>
+                        </div>
+                        {showSuggestions && (
+                            <div className="absolute top-full left-0 right-12 bg-gray-800 border border-gray-600 rounded-md mt-1 z-10 max-h-40 overflow-y-auto">
+                                {suggestions.length > 0 ? (
+                                    suggestions.map(user => (
+                                        <div 
+                                            key={user._id} 
+                                            className="p-2 hover:bg-gray-700 cursor-pointer text-white"
+                                            onClick={() => {
+                                                setNewFriendName(user.username);
+                                                setShowSuggestions(false);
+                                            }}
+                                        >
+                                            {user.username}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="p-2 text-gray-400 text-sm">No users found</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                        {friends.map(f => (
+                            <div key={f._id} className="p-3 bg-black/20 rounded-md flex justify-between items-center">
+                                <div>
+                                    <div className="font-orbitron">{f.username}</div>
+                                    <div className="text-xs text-gray-400">Level {f.level || 1}</div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => messageFriend(f)} className="px-3 py-1 bg-green-600 rounded-md">Message</button>
+                                    <button onClick={() => removeFriend(f._id)} className="px-3 py-1 bg-red-700 rounded-md">Remove</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const ChatView = () => {
+            const { user } = useAuth();
+            const [messages, setMessages] = useState([]);
+            const [newMessage, setNewMessage] = useState('');
+            const socketRef = useRef();
+            const messagesEndRef = useRef(null);
+            const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
+
+            const getRankColor = (title) => {
+                const titleRanks = {
+                    'The Awakened': 'E',
+                    'Bearer of the Spark': 'E',
+                    'Iron-Willed Challenger': 'D',
+                    'The Unwavering': 'D',
+                    'Vanguard of Progress': 'C',
+                    'Shadow\'s Ascent': 'C',
+                    'Breaker of Chains': 'B',
+                    'The Relentless': 'B',
+                    'Apex Commander': 'A',
+                    'Sovereign\'s Gaze': 'A',
+                    'Monarch of the Self': 'S',
+                    'The Pinnacle': 'S',
+                    'Ruler\'s Authority': 'N',
+                    'Architect of Your World': 'N'
+                };
+                const rank = titleRanks[title];
+                const colors = { E: 'text-gray-400', D: 'text-green-400', C: 'text-blue-400', B: 'text-purple-400', A: 'text-yellow-400', S: 'text-red-400', N: 'text-pink-400' };
+                return colors[rank] || 'text-white';
+            };
+
+            useEffect(() => { scrollToBottom(); }, [messages]);
+
+            useEffect(() => {
+                socketRef.current = io(SOCKET_URL);
+                if (user && user._id) socketRef.current.emit('register', user._id);
+
+                const fetchHistory = async () => {
+                    try {
+                        const res = await api.get('/chat/history');
+                        setMessages(res.data.filter(msg => !msg.recipientId));
+                    } catch (err) { console.error("Failed to fetch chat history", err); }
+                };
+
+                fetchHistory();
+
+                socketRef.current.on('newMessage', (message) => {
+                    if (!message.recipientId) {
+                        setMessages(prevMessages => [...prevMessages, message]);
+                    }
+                });
+
+                return () => { socketRef.current.disconnect(); };
+            }, [user]);
+
+            const sendMessage = (e) => {
+                e.preventDefault();
+                if (!newMessage.trim() || !user) return;
+                const payload = { userId: user._id, username: user.username, text: newMessage };
+                socketRef.current.emit('sendMessage', payload);
+                setNewMessage('');
+            };
+
+            return (
+                <div className="h-full flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="font-orbitron text-3xl text-green-400">Global Chat</h2>
+                    </div>
+                    <div className="flex-grow bg-black/20 p-4 rounded-t-lg border border-gray-700/50 overflow-y-auto">
+                        {messages.map((msg, index) => (
+                            <div key={index} className="mb-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="inline-flex items-center">
+                                        <span className="font-bold text-blue-300 text-lg">
+                                            {msg.user.username}
+                                        </span>
+                                        {msg.user.id && msg.user.id.equippedTitle && (
+                                            <span className={`font-bold ${getRankColor(msg.user.id.equippedTitle)} ml-1`}> [{msg.user.id.equippedTitle}]</span>
+                                        )}
+                                        <span>:</span>
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                        {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </span>
+                                </div>
+                                <span className="ml-2">{msg.text}</span>
+                            </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </div>
+                    <form onSubmit={sendMessage} className="flex-shrink-0 flex mt-2">
+                        <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="w-full p-3 form-input rounded-b-lg rounded-r-none border-t-0"/>
+                        <button type="submit" className="font-orbitron bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-b-lg rounded-l-none">Send</button>
+                    </form>
+                </div>
+            );
+        };
+
+        const LeaderboardFiltersView = () => {
+            const [timeFilter, setTimeFilter] = useState('daily');
+            const [typeFilter, setTypeFilter] = useState('points');
+
+            const timeFilters = [
+                { id: 'daily', label: 'Daily', active: true },
+                { id: 'weekly', label: 'Weekly', active: false },
+                { id: 'alltime', label: 'All-Time', active: false }
+            ];
+
+            const typeFilters = [
+                { id: 'points', label: 'Top by Points (P)', active: true },
+                { id: 'level', label: 'Top by Level', active: false },
+                { id: 'streak', label: 'Top by Day Streak', active: false }
+            ];
+
+            return (
+                <div>
+                    <h2 className="font-orbitron text-3xl text-yellow-400 mb-4">Filters</h2>
+                    
+                    <div className="mb-6">
+                        <h3 className="font-orbitron text-lg text-white mb-3">By Time</h3>
+                        <div className="space-y-2">
+                            {timeFilters.map(filter => (
+                                <button
+                                    key={filter.id}
+                                    onClick={() => setTimeFilter(filter.id)}
+                                    className={`w-full p-3 rounded-lg border text-left font-orbitron transition-all ${
+                                        timeFilter === filter.id 
+                                            ? 'bg-yellow-600/20 border-yellow-400 text-yellow-300' 
+                                            : 'bg-black/20 border-gray-700 text-gray-400 hover:border-gray-600'
+                                    }`}
+                                >
+                                    {filter.label}
+                                    {timeFilter === filter.id && <span className="float-right">✓</span>}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="font-orbitron text-lg text-white mb-3">By Type</h3>
+                        <div className="space-y-2">
+                            {typeFilters.map(filter => (
+                                <button
+                                    key={filter.id}
+                                    onClick={() => setTypeFilter(filter.id)}
+                                    className={`w-full p-3 rounded-lg border text-left font-orbitron transition-all ${
+                                        typeFilter === filter.id 
+                                            ? 'bg-yellow-600/20 border-yellow-400 text-yellow-300' 
+                                            : 'bg-black/20 border-gray-700 text-gray-400 hover:border-gray-600'
+                                    }`}
+                                >
+                                    {filter.label}
+                                    {typeFilter === filter.id && <span className="float-right">✓</span>}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mt-6 p-3 bg-gray-900/30 rounded-lg border border-gray-700/50 text-center">
+                        <p className="text-xs text-gray-500 font-orbitron">Selected: {timeFilters.find(f => f.id === timeFilter)?.label} • {typeFilters.find(f => f.id === typeFilter)?.label}</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const RecentChatsView = ({ setSelectedFriend, setShowDMOverlay }) => {
+            const { user } = useAuth();
+            const [recentChats, setRecentChats] = useState([]);
+            const [onlineUsers, setOnlineUsers] = useState(new Set());
+            const socketRef = useRef();
+
+            useEffect(() => {
+                socketRef.current = io(SOCKET_URL);
+                if (user && user._id) socketRef.current.emit('register', user._id);
+
+                socketRef.current.on('onlineUsers', (users) => {
+                    setOnlineUsers(new Set(users));
+                });
+
+                socketRef.current.on('userOnline', (userId) => {
+                    setOnlineUsers(prev => new Set([...prev, userId]));
+                });
+
+                socketRef.current.on('userOffline', (userId) => {
+                    setOnlineUsers(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(userId);
+                        return newSet;
+                    });
+                });
+
+                socketRef.current.on('privateMessage', (message) => {
+                    if (message.text && message.text.trim()) {
+                        const partnerId = message.user.id._id === user._id ? message.recipientId : message.user.id._id;
+                        const partnerUsername = message.user.id._id === user._id ? message.recipientUsername : message.user.username;
+                        
+                        setRecentChats(prev => {
+                            const filtered = prev.filter(chat => chat.id !== partnerId);
+                            return [{
+                                id: partnerId,
+                                username: partnerUsername,
+                                lastMessage: message.text,
+                                timestamp: message.timestamp || new Date().toISOString()
+                            }, ...filtered].slice(0, 10);
+                        });
+                    }
+                });
+                
+                const handleUpdateRecentChats = (event) => {
+                    const chatData = event.detail;
+                    setRecentChats(prev => {
+                        const filtered = prev.filter(chat => chat.id !== chatData.id);
+                        return [chatData, ...filtered].slice(0, 10);
+                    });
+                };
+                
+                window.addEventListener('updateRecentChats', handleUpdateRecentChats);
+
+                return () => { 
+                    socketRef.current.disconnect();
+                    window.removeEventListener('updateRecentChats', handleUpdateRecentChats);
+                };
+            }, [user]);
+
+            useEffect(() => {
+                const fetchRecentChats = async () => {
+                    try {
+                        const [chatRes, friendsRes] = await Promise.all([
+                            api.get('/chat/history'),
+                            api.get('/friends')
+                        ]);
+                        
+                        const dmMessages = chatRes.data.filter(msg => msg.recipientId);
+                        const friends = friendsRes.data;
+                        const friendIds = friends.map(f => f._id);
+                        
+                        // Group messages by conversation partner, only include friends
+                        const conversations = {};
+                        dmMessages.forEach(msg => {
+                            const partnerId = msg.user.id._id === user._id ? msg.recipientId : msg.user.id._id;
+                            
+                            // Only include if partner is in friends list
+                            if (!friendIds.includes(partnerId)) return;
+                            
+                            if (!conversations[partnerId] || new Date(msg.timestamp) > new Date(conversations[partnerId].timestamp)) {
+                                const friend = friends.find(f => f._id === partnerId);
+                                conversations[partnerId] = {
+                                    id: partnerId,
+                                    username: friend?.username || (msg.user.id._id === user._id ? msg.recipientUsername : msg.user.username),
+                                    lastMessage: msg.text,
+                                    timestamp: msg.timestamp
+                                };
+                            }
+                        });
+                        
+                        const sortedChats = Object.values(conversations)
+                            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                            .slice(0, 10);
+                        
+                        setRecentChats(sortedChats);
+                    } catch (err) {
+                        console.error('Failed to fetch recent chats', err);
+                    }
+                };
+                
+                if (user) fetchRecentChats();
+            }, [user]);
+
+            const openChat = (chat) => {
+                setSelectedFriend({ _id: chat.id, username: chat.username });
+                setShowDMOverlay(true);
+            };
+
+            const formatTimestamp = (timestamp) => {
+                const now = new Date();
+                const msgTime = new Date(timestamp);
+                const diffMs = now - msgTime;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+                
+                if (diffMins < 1) return 'Just now';
+                if (diffMins < 60) return `${diffMins} min ago`;
+                if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+            };
+
+            return (
+                <div>
+                    <h2 className="font-orbitron text-3xl text-purple-400 mb-4">Recent Chats</h2>
+                    <div className="space-y-3">
+                        {recentChats.length === 0 ? (
+                            <div className="p-4 bg-gray-900/30 rounded-lg border border-gray-700/50 text-center">
+                                <p className="text-gray-500 font-orbitron text-sm">No recent conversations</p>
+                                <p className="text-xs text-gray-600 mt-1">Start messaging friends to see them here</p>
+                            </div>
+                        ) : (
+                            recentChats.map(chat => (
+                                <div 
+                                    key={chat.id} 
+                                    onClick={() => openChat(chat)}
+                                    className="p-3 bg-black/20 rounded-lg border border-gray-700/50 hover:border-purple-400 cursor-pointer transition-all"
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-orbitron text-white">{chat.username}</span>
+                                            <div className={`w-2 h-2 rounded-full ${onlineUsers.has(chat.id) ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                                        </div>
+                                        <span className="text-xs text-gray-500">{formatTimestamp(chat.timestamp)}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-400 truncate">{chat.lastMessage}</p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    <div className="mt-6 p-3 bg-gray-900/30 rounded-lg border border-gray-700/50 text-center">
+                        <p className="text-xs text-gray-500 font-orbitron">Click on a chat to continue conversation</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const OnlineStatus = ({ friendId }) => {
+            const [onlineUsers, setOnlineUsers] = useState(new Set());
+            const socketRef = useRef();
+
+            useEffect(() => {
+                socketRef.current = io(SOCKET_URL);
+                socketRef.current.on('onlineUsers', (users) => {
+                    setOnlineUsers(new Set(users));
+                });
+                socketRef.current.on('userOnline', (userId) => {
+                    setOnlineUsers(prev => new Set([...prev, userId]));
+                });
+                socketRef.current.on('userOffline', (userId) => {
+                    setOnlineUsers(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(userId);
+                        return newSet;
+                    });
+                });
+                return () => { socketRef.current.disconnect(); };
+            }, []);
+
+            const isOnline = onlineUsers.has(friendId);
+            return (
+                <div className="flex items-center gap-2 text-sm mb-4">
+                    <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${isOnline ? 'border-green-400' : 'border-gray-400'}`}>
+                        {isOnline && <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>}
+                    </div>
+                    <span className={isOnline ? 'text-green-400' : 'text-gray-400'}>
+                        {isOnline ? 'Online' : 'Offline'}
+                    </span>
+                </div>
+            );
+        };
+
+        const AnnouncementsView = () => {
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [showAdminLogin, setShowAdminLogin] = useState(false);
+            const [adminPassword, setAdminPassword] = useState('');
+            const [announcements, setAnnouncements] = useState([
+                { id: 1, type: 'notice', title: 'Notice: New S-Rank Titles added to the Shop!', timestamp: '23-10-25' },
+                { id: 2, type: 'event', title: 'Event: Double EXP weekend starts tomorrow!', timestamp: '23-10-25' },
+                { id: 3, type: 'maintenance', title: 'MAINTENANCE: Server restart at 10 PM.', timestamp: '23-10-25' }
+            ]);
+            const [newAnnouncement, setNewAnnouncement] = useState({ type: 'notice', title: '' });
+
+            const handleAdminLogin = (e) => {
+                e.preventDefault();
+                if (adminPassword === 'admin123') {
+                    setIsAdmin(true);
+                    setShowAdminLogin(false);
+                    setAdminPassword('');
+                } else {
+                    alert('Invalid admin password');
+                }
+            };
+
+            const addAnnouncement = (e) => {
+                e.preventDefault();
+                if (!newAnnouncement.title.trim()) return;
+                const announcement = {
+                    id: Date.now(),
+                    type: newAnnouncement.type,
+                    title: newAnnouncement.title,
+                    timestamp: new Date().toISOString().split('T')[0]
+                };
+                setAnnouncements(prev => {
+                    const filtered = prev.filter(a => a.type !== newAnnouncement.type);
+                    return [announcement, ...filtered];
+                });
+                setNewAnnouncement({ type: 'notice', title: '' });
+            };
+
+            const getTypeColor = (type) => {
+                const colors = {
+                    notice: 'text-blue-400 border-blue-400',
+                    event: 'text-green-400 border-green-400',
+                    maintenance: 'text-red-400 border-red-400'
+                };
+                return colors[type] || 'text-gray-400 border-gray-400';
+            };
+
+            const getTypeIcon = (type) => {
+                const icons = {
+                    notice: '📢',
+                    event: '🎉',
+                    maintenance: '⚠️'
+                };
+                return icons[type] || '📋';
+            };
+
+            return (
+                <div>
+                    <h2 className="font-orbitron text-3xl text-orange-400 mb-4">Server Announcements</h2>
+                    <div className="space-y-3">
+                        {announcements.map(announcement => (
+                            <div key={announcement.id} className={`p-4 bg-black/20 rounded-lg border-l-4 ${getTypeColor(announcement.type)}`}>
+                                <div className="flex items-start gap-3">
+                                    <span className="text-2xl">{getTypeIcon(announcement.type)}</span>
+                                    <div className="flex-grow">
+                                        <p className="text-sm font-orbitron break-words">{announcement.title}</p>
+                                        <p className="text-xs text-gray-500 mt-1">{announcement.timestamp}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    {isAdmin ? (
+                        <div className="mt-6">
+                            <h3 className="font-orbitron text-lg text-green-400 mb-3">Admin Panel</h3>
+                            <form onSubmit={addAnnouncement} className="space-y-3">
+                                <select 
+                                    value={newAnnouncement.type} 
+                                    onChange={(e) => setNewAnnouncement(prev => ({...prev, type: e.target.value}))}
+                                    className="w-full p-2 form-input rounded-md"
+                                >
+                                    <option value="notice">Notice</option>
+                                    <option value="event">Event</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                                <input 
+                                    type="text" 
+                                    value={newAnnouncement.title} 
+                                    onChange={(e) => setNewAnnouncement(prev => ({...prev, title: e.target.value}))}
+                                    placeholder="Announcement text..."
+                                    className="w-full p-2 form-input rounded-md"
+                                />
+                                <button type="submit" className="w-full p-2 bg-green-600 hover:bg-green-500 rounded-md font-orbitron">Post</button>
+                            </form>
+                            <button onClick={() => setIsAdmin(false)} className="w-full mt-2 p-2 bg-red-600 hover:bg-red-500 rounded-md font-orbitron text-sm">Logout</button>
+                        </div>
+                    ) : (
+                        <div className="mt-6 p-3 bg-gray-900/30 rounded-lg border border-gray-700/50 text-center cursor-pointer hover:bg-gray-800/30" onClick={() => setShowAdminLogin(true)}>
+                            <p className="text-xs text-gray-500 font-orbitron">Admin Panel Access Required</p>
+                        </div>
+                    )}
+                    
+                    {showAdminLogin && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                            <div className="bg-gray-900 p-6 rounded-lg border border-gray-700 w-80">
+                                <h3 className="font-orbitron text-xl text-white mb-4">Admin Login</h3>
+                                <form onSubmit={handleAdminLogin}>
+                                    <input 
+                                        type="password" 
+                                        value={adminPassword} 
+                                        onChange={(e) => setAdminPassword(e.target.value)}
+                                        placeholder="Admin password"
+                                        className="w-full p-3 form-input rounded-md mb-4"
+                                        autoFocus
+                                    />
+                                    <div className="flex gap-2">
+                                        <button type="submit" className="flex-1 p-2 bg-blue-600 hover:bg-blue-500 rounded-md font-orbitron">Login</button>
+                                        <button type="button" onClick={() => setShowAdminLogin(false)} className="flex-1 p-2 bg-gray-600 hover:bg-gray-500 rounded-md font-orbitron">Cancel</button>
+                                    </div>
+                                </form>
+                                <p className="text-xs text-gray-500 mt-2 text-center">Demo password: admin123</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const DMView = ({ selectedFriend, setSelectedFriend, isOverlay = false }) => {
+            const { user } = useAuth();
+            const [messages, setMessages] = useState([]);
+            const [newMessage, setNewMessage] = useState('');
+            const [friends, setFriends] = useState([]);
+            const socketRef = useRef();
+            const messagesEndRef = useRef(null);
+            const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });};
+
+            useEffect(() => { scrollToBottom(); }, [messages]);
+
+            useEffect(() => {
+                socketRef.current = io(SOCKET_URL);
+                if (user && user._id) socketRef.current.emit('register', user._id);
+
+                const fetchHistory = async () => {
+                    try {
+                        const res = await api.get('/chat/history');
+                        setMessages(res.data.filter(msg => msg.recipientId));
+                    } catch (err) { console.error("Failed to fetch DM history", err); }
+                };
+
+                const fetchFriends = async () => {
+                    try {
+                        const res = await api.get('/friends');
+                        setFriends(res.data);
+                    } catch (err) { console.error('Failed to fetch friends', err); }
+                };
+
+                fetchHistory();
+                fetchFriends();
+
+                socketRef.current.on('privateMessage', (message) => {
+                    setMessages(prev => [...prev, message]);
+                });
+
+                return () => { socketRef.current.disconnect(); };
+            }, [user]);
+
+            const sendMessage = (e) => {
+                e.preventDefault();
+                if (!newMessage.trim() || !user || !selectedFriend) return;
+                const payload = { userId: user._id, username: user.username, text: newMessage, recipientId: selectedFriend._id };
+                socketRef.current.emit('sendMessage', payload);
+                
+                // Trigger immediate update to recent chats by emitting a custom event
+                window.dispatchEvent(new CustomEvent('updateRecentChats', {
+                    detail: {
+                        id: selectedFriend._id,
+                        username: selectedFriend.username,
+                        lastMessage: newMessage,
+                        timestamp: new Date().toISOString()
+                    }
+                }));
+                
+                setNewMessage('');
+            };
+
+            const filteredMessages = selectedFriend ? messages.filter(msg => 
+                (msg.user.id && msg.user.id._id === selectedFriend._id && msg.recipientId === user._id) || 
+                (msg.user.id && msg.user.id._id === user._id && msg.recipientId === selectedFriend._id)
+            ) : [];
+
+            return (
+                <div className="h-full flex flex-col">
+                    {!isOverlay && (
+                        <div className="mb-4">
+                            <h2 className="font-orbitron text-3xl text-purple-400 mb-4">
+                                {selectedFriend ? `Message ${selectedFriend.username}` : 'Direct Messages'}
+                            </h2>
+                            {selectedFriend && (
+                                <div className="flex items-center gap-2 text-sm">
+                                    <div className={`w-2 h-2 rounded-full ${Math.random() > 0.5 ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                                    <span className="text-gray-400">
+                                        {Math.random() > 0.5 ? 'Online' : 'Last seen 2 hours ago'}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {!isOverlay && (
+                        <div className="mb-4 overflow-x-auto">
+                            <div className="flex gap-2 pb-2">
+                                {friends.map(f => {
+                                    const isOnline = Math.random() > 0.5;
+                                    return (
+                                        <button
+                                            key={f._id}
+                                            onClick={() => setSelectedFriend(f)}
+                                            className={`flex-shrink-0 p-2 rounded-lg border transition-all text-left min-w-[120px] ${
+                                                selectedFriend?._id === f._id 
+                                                    ? 'bg-purple-600/20 border-purple-400 text-purple-300' 
+                                                    : 'bg-black/20 border-gray-700/50 hover:border-purple-400 text-white'
+                                            }`}
+                                        >
+                                            <div className="font-orbitron text-sm">{f.username}</div>
+                                            <div className="flex items-center gap-1 text-xs">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                                                <span className="text-gray-400">
+                                                    {isOnline ? 'Online' : 'Offline'}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                    {selectedFriend ? (
+                        <div className="flex-grow bg-black/20 p-4 rounded-t-lg border border-gray-700/50 overflow-y-auto">
+                            {filteredMessages.map((msg, index) => (
+                                <div key={index} className="mb-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="inline-flex items-center">
+                                            <span className={`font-bold ${msg.user.id === user._id ? 'text-green-300' : 'text-blue-300'}`}>
+                                                {msg.user.username}
+                                            </span>
+                                            <span>:</span>
+                                        </div>
+                                        <span className="text-xs text-gray-500">
+                                            {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                        </span>
+                                    </div>
+                                    <span className="ml-2">{msg.text}</span>
+                                </div>
+                            ))}
+                            <div ref={messagesEndRef} />
+                        </div>
+                    ) : (
+                        <div className="flex-grow flex items-center justify-center text-gray-400">
+                            <p className="font-orbitron text-lg">Select a friend above to start messaging</p>
+                        </div>
+                    )}
+                    <form onSubmit={sendMessage} className="flex-shrink-0 flex mt-2">
+                        <input 
+                            type="text" 
+                            value={newMessage} 
+                            onChange={(e) => setNewMessage(e.target.value)} 
+                            placeholder={selectedFriend ? `Message ${selectedFriend.username}...` : "Select a friend first..."} 
+                            disabled={!selectedFriend}
+                            className="w-full p-3 form-input rounded-b-lg rounded-r-none border-t-0"
+                        />
+                        <button 
+                            type="submit" 
+                            disabled={!selectedFriend}
+                            className="font-orbitron bg-purple-600 hover:bg-purple-500 disabled:bg-gray-600 text-white p-3 rounded-b-lg rounded-l-none"
+                        >
+                            Send
+                        </button>
+                    </form>
+                </div>
+            );
+        };
+
+        const ProfileView = ({ setSystemMessage }) => {
+            const { user, setUser, logout } = useAuth();
+            const [newUsername, setNewUsername] = useState(user.username);
+            const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+            const [showPasswordChange, setShowPasswordChange] = useState(false);
+            const [passwordData, setPasswordData] = useState({ oldPassword: '', newPassword: '' });
+            const [loading, setLoading] = useState(false);
+
+            const handleUpdateUsername = async (e) => {
+                e.preventDefault();
+                if (!newUsername.trim() || newUsername === user.username) return;
+                setLoading(true);
+                try {
+                    const res = await api.put('/user/username', { username: newUsername });
+                    setUser(res.data.user);
+                    setNewUsername(res.data.user.username);
+                    setSystemMessage({ type: 'success', title: 'Updated', body: 'Username updated successfully' });
+                } catch (err) {
+                    console.error('Username update error:', err);
+                    console.error('Error response:', err.response);
+                    setSystemMessage({ type: 'error', title: 'Update Failed', body: err.response?.data?.msg || err.message || 'Failed to update username' });
+                    setNewUsername(user.username);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleChangePassword = async (e) => {
+                e.preventDefault();
+                if (!passwordData.oldPassword || !passwordData.newPassword) return;
+                setLoading(true);
+                try {
+                    await api.put('/user/password', passwordData);
+                    setSystemMessage({ type: 'success', title: 'Password Changed', body: 'Password updated successfully' });
+                    setPasswordData({ oldPassword: '', newPassword: '' });
+                    setShowPasswordChange(false);
+                } catch (err) {
+                    setSystemMessage({ type: 'error', title: 'Password Change Failed', body: err.response?.data?.msg || 'Failed to change password' });
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleDeleteAccount = async () => {
+                setLoading(true);
+                try {
+                    await api.delete('/user/account');
+                    logout();
+                } catch (err) {
+                    setSystemMessage({ type: 'error', title: 'Delete Failed', body: err.response?.data?.msg || 'Failed to delete account' });
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div>
+                    <h2 className="font-orbitron text-3xl text-cyan-400 mb-6">Profile Settings</h2>
+                    
+                    <div className="space-y-6">
+                        <div className="p-4 bg-black/20 rounded-lg border border-gray-700/50">
+                            <h3 className="font-orbitron text-xl text-white mb-4">Account Information</h3>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Email</label>
+                                    <input type="email" value={user.email} disabled className="w-full p-3 rounded-md bg-gray-800 text-gray-500 cursor-not-allowed" />
+                                </div>
+                                <form onSubmit={handleUpdateUsername}>
+                                    <label className="block text-sm text-gray-400 mb-1">Username</label>
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text" 
+                                            value={newUsername} 
+                                            onChange={(e) => setNewUsername(e.target.value)}
+                                            className="flex-grow p-3 rounded-md form-input"
+                                            required
+                                        />
+                                        <button 
+                                            type="submit" 
+                                            disabled={loading || !newUsername.trim() || newUsername === user.username}
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 rounded-md font-orbitron"
+                                        >
+                                            Update
+                                        </button>
+                                    </div>
+                                </form>
+                                <div className="mt-3">
+                                    <label className="block text-sm text-gray-400 mb-1">Password</label>
+                                    <button 
+                                        onClick={() => setShowPasswordChange(true)}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-md font-orbitron text-white"
+                                    >
+                                        Change Password
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-red-900/20 rounded-lg border border-red-500/50">
+                            <h3 className="font-orbitron text-xl text-red-400 mb-4">Danger Zone</h3>
+                            <p className="text-sm text-gray-400 mb-4">Once you delete your account, there is no going back. This will permanently delete your account and all associated data.</p>
+                            <button 
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-md font-orbitron text-white"
+                            >
+                                Delete Account
+                            </button>
+                        </div>
+                    </div>
+
+                    {showPasswordChange && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                            <div className="bg-gray-900 p-6 rounded-lg border border-blue-500 w-96">
+                                <h3 className="font-orbitron text-xl text-blue-400 mb-4">Change Password</h3>
+                                <form onSubmit={handleChangePassword} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Current Password</label>
+                                        <input 
+                                            type="password" 
+                                            value={passwordData.oldPassword} 
+                                            onChange={(e) => setPasswordData(prev => ({...prev, oldPassword: e.target.value}))}
+                                            className="w-full p-3 form-input rounded-md"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">New Password</label>
+                                        <input 
+                                            type="password" 
+                                            value={passwordData.newPassword} 
+                                            onChange={(e) => setPasswordData(prev => ({...prev, newPassword: e.target.value}))}
+                                            className="w-full p-3 form-input rounded-md"
+                                            minLength="6"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                setShowPasswordChange(false);
+                                                setPasswordData({ oldPassword: '', newPassword: '' });
+                                            }}
+                                            className="flex-1 p-2 bg-gray-600 hover:bg-gray-500 rounded-md font-orbitron"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button 
+                                            type="submit"
+                                            disabled={loading || !passwordData.oldPassword || !passwordData.newPassword}
+                                            className="flex-1 p-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 rounded-md font-orbitron text-white"
+                                        >
+                                            {loading ? 'Changing...' : 'Change Password'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {showDeleteConfirm && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                            <div className="bg-gray-900 p-6 rounded-lg border border-red-500 w-96">
+                                <h3 className="font-orbitron text-xl text-red-400 mb-4">Confirm Account Deletion</h3>
+                                <p className="text-gray-300 mb-6">Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data.</p>
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => setShowDeleteConfirm(false)}
+                                        className="flex-1 p-2 bg-gray-600 hover:bg-gray-500 rounded-md font-orbitron"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        onClick={handleDeleteAccount}
+                                        disabled={loading}
+                                        className="flex-1 p-2 bg-red-600 hover:bg-red-500 disabled:bg-red-800 rounded-md font-orbitron text-white"
+                                    >
+                                        {loading ? 'Deleting...' : 'Confirm Delete'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Solo Leveling SYSTEM notification bar
+        const SystemNotifyBar = ({ level = 1, onComplete, isTransition = false, transitionData = null }) => {
+            const [visible, setVisible] = useState(false);
+            const [phase, setPhase] = useState(isTransition ? 'normal' : 'single');
+
+            useEffect(() => {
+                if (phase === 'normal') {
+                    document.body.classList.add('no-scroll');
+                    setVisible(true);
+                    const animationDuration = 350;
+                    const t1 = setTimeout(() => setVisible(false), 1800 - animationDuration);
+                    const t2 = setTimeout(() => {
+                        setVisible(false);
+                        setPhase('transition');
+                    }, 1800);
+                    return () => {
+                        clearTimeout(t1);
+                        clearTimeout(t2);
+                    };
+                } else if (phase === 'transition') {
+                    setTimeout(() => {
+                        document.body.classList.add('no-scroll');
+                        setVisible(true);
+                        const animationDuration = 350;
+                        const t1 = setTimeout(() => setVisible(false), 3000 - animationDuration);
+                        const t2 = setTimeout(() => {
+                            if (onComplete) onComplete();
+                            document.body.classList.remove('no-scroll');
+                        }, 3000);
+                        return () => {
+                            clearTimeout(t1);
+                            clearTimeout(t2);
+                            document.body.classList.remove('no-scroll');
+                        };
+                    }, 200);
+                } else if (phase === 'single') {
+                    document.body.classList.add('no-scroll');
+                    setVisible(true);
+                    const animationDuration = 350;
+                    const t1 = setTimeout(() => setVisible(false), 1800 - animationDuration);
+                    const t2 = setTimeout(() => {
+                        if (onComplete) onComplete();
+                        document.body.classList.remove('no-scroll');
+                    }, 1800);
+                    return () => {
+                        clearTimeout(t1);
+                        clearTimeout(t2);
+                        document.body.classList.remove('no-scroll');
+                    };
+                }
+            }, [phase, onComplete]);
+
+            const getHeader = () => {
+                if (phase === 'transition') {
+                    return (
+                        <div className="solo-header">
+                            <span className="solo-icon">⚠</span>
+                            ALERT
+                        </div>
+                    );
+                } else {
+                    return (
+                        <div className="solo-header">
+                            <span className="solo-icon">ⓘ</span>
+                            NOTIFICATION
+                        </div>
+                    );
+                }
+            };
+
+            const getContent = () => {
+                if (phase === 'transition' && transitionData) {
+                    return (
+                        <>
+                            <div className="solo-body" style={{ fontSize: '2.5rem' }}>
+                                {transitionData.fromRank} → {transitionData.toRank}
+                            </div>
+                            <div className="solo-body" style={{ fontSize: '1.5rem', marginTop: '1rem', fontStyle: 'italic' }}>
+                                "{transitionData.dialogue}"
+                            </div>
+                        </>
+                    );
+                } else {
+                    return (
+                        <div className="solo-body">
+                            Leveled up to level {level}!
+                        </div>
+                    );
+                }
+            };
+
+            return (
+                <div className="solo-notification-overlay" style={phase === 'transition' ? { background: 'rgba(0,0,0,1)' } : {}}>
+                    <div className="system-notify-container">
+                        <div className={`system-notify solo-glitch-box ${visible ? 'show' : 'hide'}`} role="status" aria-live="polite">
+                            {getHeader()}
+                            {getContent()}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        
+        const Dashboard = () => {
+            const { user, logout, setUser } = useAuth();
+            const [missions, setMissions] = useState([]);
+            const [systemMessage, setSystemMessage] = useState(null);
+            const [levelUp, setLevelUp] = useState(false);
+            const [activeTab, setActiveTab] = useState('quests');
+            const [activeMission, setActiveMission] = useState(null);
+            const [selectedFriend, setSelectedFriend] = useState(null);
+            const [showDMOverlay, setShowDMOverlay] = useState(false);
+            const [statsInfo, setStatsInfo] = useState(null);
+            const fetchMissions = useCallback(async () => { try { const res = await api.get('/missions/daily'); setMissions(res.data); } catch (err) { console.error("Failed to fetch missions:", err); }}, []);
+            const fetchStats = useCallback(async () => { try { const res = await api.get('/stats'); setStatsInfo(res.data); } catch (err) { console.error('Failed to fetch stats', err); }}, []);
+            useEffect(() => { if(user) { fetchMissions(); fetchStats(); } }, [user, fetchMissions, fetchStats]);
+
+            const handleStartMission = async (id) => { try { const res = await api.put(`/missions/start/${id}`); setActiveMission(res.data); } catch (err) { console.error(err); } };
+            const handleCompleteMission = async (id) => { 
+                try { 
+                    const previousLevel = user.level;
+                    const res = await api.put(`/missions/complete/${id}`); 
+                    setUser(res.data.user); 
+                    setSystemMessage({ type: res.data.updatedMission.status === 'Failed' ? 'error' : 'success', title: 'Mission Update', body: res.data.msg }); 
+                    
+                    if (res.data.leveledUp) { 
+                        // Check for rank up
+                        try {
+                            const rankRes = await api.post('/stats/check-rankup', { previousLevel });
+                            if (rankRes.data.rankUp) {
+                                setLevelUp({ 
+                                    level: res.data.newLevel, 
+                                    isTransition: true, 
+                                    transitionData: { 
+                                        fromRank: rankRes.data.message.split('MAIN RANK: ')[1]?.split('\n')[0]?.split(' -> ')[0] || 'E',
+                                        toRank: rankRes.data.newRank,
+                                        dialogue: rankRes.data.message.split('"')[1] || 'Power increases...'
+                                    }
+                                });
+                            } else {
+                                setLevelUp({ level: res.data.newLevel, isTransition: false, transitionData: null });
+                            }
+                        } catch (rankErr) {
+                            console.error('Failed to check rank up:', rankErr);
+                            setLevelUp({ level: res.data.newLevel, isTransition: false, transitionData: null });
+                        }
+                    } 
+                    
+                    setActiveMission(null); 
+                    fetchMissions(); 
+                } catch (err) { 
+                    console.error(err); 
+                    setSystemMessage({ type: 'error', title: 'Error', body: err.response?.data?.msg || 'Action failed.' }); 
+                } 
+            };
+            const handleMissionCreated = (newMission) => { setMissions(prev => [...prev, newMission]); };
+            const handleDeleteMission = async (id) => { try { await api.delete(`/missions/${id}`); setMissions(prev => prev.filter(m => m._id !== id)); } catch (err) { console.error(err); } };
+            
+            const handleUpgradeStat = async (statName) => {
+                try {
+                    const res = await api.post('/stats/upgrade', { statName });
+                    setStatsInfo(res.data.stats);
+                    
+                    // Get fresh user data to ensure everything is in sync
+                    const userRes = await api.get('/auth/me');
+                    setUser(userRes.data);
+                    
+                    setSystemMessage({ type: 'success', title: 'Stat Upgraded', body: res.data.message });
+                    
+                    // Refresh stat quests to show new difficulty
+                    const missionsRes = await api.post('/missions/refresh-stat-quests');
+                    setMissions(missionsRes.data);
+                } catch (err) {
+                    setSystemMessage({ type: 'error', title: 'Upgrade Failed', body: err.response?.data?.message || 'An error occurred.' });
+                }
+            };
+
+            const getRank = (level) => {
+                if (level >= 101) return 'N';
+                if (level >= 86) return 'S';
+                if (level >= 61) return 'A';
+                if (level >= 46) return 'B';
+                if (level >= 31) return 'C';
+                if (level >= 16) return 'D';
+                return 'E';
+            };
+
+            const expPercentage = user ? (user.exp / user.expToNextLevel) * 100 : 0;
+            if (!user) return <LoadingSpinner />;
+            const TabButton = ({ tabName, children }) => (<button onClick={() => setActiveTab(tabName)} className={`px-4 py-2 font-orbitron rounded-t-lg transition-colors ${activeTab === tabName ? 'bg-black/40 border-b-2 border-blue-400 text-white' : 'text-gray-500 hover:text-white'}`}>{children}</button>);
+
+            if(activeMission) { return <FocusMode mission={activeMission} onComplete={handleCompleteMission} /> }
+            
+            return (
+                <div className="h-screen max-h-screen flex flex-col p-4 sm:p-6 lg:p-8 gap-6 text-gray-200">
+                    {/* MODIFIED: Moved SystemMessage inside Status Panel */}
+                    <header className={`fade-in border border-blue-500/30 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-center gap-4 transition-all duration-500 flex-shrink-0 ${levelUp ? 'level-up-glow' : ''}`}>
+                        <div className="flex items-center gap-4"><div className="flex flex-col items-center"><p className="text-sm text-blue-300">Rank</p><div className="w-16 h-16 rounded-full bg-gray-900 border-2 border-blue-400 flex items-center justify-center text-blue-300 font-orbitron text-4xl">{getRank(user.level)}</div></div><div><h1 className="font-orbitron text-xl sm:text-2xl text-white">{user.username}</h1><p className="text-sm text-yellow-300">🏆 {user.equippedTitle || 'The Weakest Hunter'}</p></div></div>
+                        <div className="flex items-center gap-4"><div className="font-orbitron text-center"><p className="text-2xl text-orange-400">{user.streak || 0}</p><p className="text-xs text-gray-400">DAY STREAK</p></div><div className="w-full sm:w-64 flex flex-col gap-2"><div className="flex justify-between items-baseline"><span className="font-orbitron text-lg text-blue-300">LV. {user.level}</span><span className="text-xs text-gray-400 font-mono">EXP: {user.exp} / {user.expToNextLevel}</span></div><div className="w-full bg-gray-900/50 rounded-full h-4 border border-blue-500/30 overflow-hidden"><div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${expPercentage}%` }}></div></div></div></div>
+                    </header>
+                    <main className={`${activeTab === 'profile' ? 'flex flex-col' : 'grid grid-cols-1 lg:grid-cols-3'} gap-6 flex-grow min-h-0 relative z-10`}>
+                        <div className={`${activeTab === 'profile' ? 'w-full' : 'lg:col-span-2'} flex flex-col min-h-0`}>
+                            <div className="border-b border-gray-700/50 mb-4 flex-shrink-0"><nav className="-mb-px flex gap-4"><TabButton tabName="quests">Quests</TabButton><TabButton tabName="leaderboard">Leaderboard</TabButton><TabButton tabName="shop">Shop</TabButton><TabButton tabName="chat">Global Chat</TabButton><TabButton tabName="friends">Friends</TabButton><TabButton tabName="profile">Profile</TabButton></nav></div>
+                            <div className="border border-gray-700/50 rounded-lg p-4 sm:p-6 fade-in flex-grow overflow-y-auto">
+                                {activeTab === 'quests' && <QuestsView missions={missions} onComplete={handleCompleteMission} onStart={handleStartMission} onDelete={handleDeleteMission} onMissionCreated={handleMissionCreated} user={user} />}
+                                {activeTab === 'leaderboard' && <LeaderboardView />}
+                                {activeTab === 'shop' && <ShopView setSystemMessage={setSystemMessage} />}
+                                {activeTab === 'chat' && <ChatView />}
+                                {activeTab === 'friends' && <FriendsView setActiveTab={setActiveTab} setSelectedFriend={setSelectedFriend} setShowDMOverlay={setShowDMOverlay} />}
+                                {activeTab === 'profile' && <ProfileView setSystemMessage={setSystemMessage} />}
+                            </div>
+                        </div>
+                        {activeTab !== 'profile' && (
+                            <div className="border border-gray-700/50 rounded-lg p-4 sm:p-6 fade-in flex flex-col">
+                                <div className="flex-grow overflow-y-auto mb-4">
+                                    {activeTab === 'quests' && (
+                                        <>
+                                            <h2 className="font-orbitron text-3xl text-white mb-4">Status</h2>
+                                            {statsInfo ? (
+                                                <div className="space-y-3">
+                                                    {Object.entries(statsInfo.stats).map(([statName, currentLevel]) => {
+                                                        const cost = statsInfo.upgradeCosts[statName];
+                                                        const canUpgrade = statsInfo.canUpgrade[statName];
+                                                        return (
+                                                            <div key={statName} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
+                                                                <div className="flex-grow">
+                                                                    <div className="font-orbitron text-sm capitalize text-white">{statName}</div>
+                                                                    <div className="text-xs text-gray-400">LV. {currentLevel} / {statsInfo.statCaps}</div>
+                                                                    {currentLevel < 10 && <div className="text-xs text-yellow-300">{cost} P</div>}
+                                                                </div>
+                                                                <div className="flex flex-col items-center gap-1">
+                                                                    <span className="text-xs text-gray-400 font-orbitron">Level</span>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-orbitron text-blue-300">{currentLevel}</span>
+                                                                        <button
+                                                                            onClick={() => handleUpgradeStat(statName)}
+                                                                            disabled={!canUpgrade}
+                                                                            className={`w-8 h-8 rounded-full font-orbitron text-sm transition-all ${
+                                                                                canUpgrade ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                                                            }`}
+                                                                        >
+                                                                            +
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    <hr className="border-gray-700 my-4"/>
+                                                    <div className="flex justify-between items-center">
+                                                        <span>Points</span>
+                                                        <span className="font-orbitron text-yellow-300">{statsInfo.points} P</span>
+                                                    </div>
+                                                    <div className="text-xs text-gray-400 mt-2">
+                                                        {statsInfo.mainRank}-Rank (Cap: LV.{statsInfo.statCaps})
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4 font-mono text-lg">
+                                                    {user.stats && Object.entries(user.stats).map(([stat, value]) => (
+                                                        <div className="flex justify-between items-center" key={stat}>
+                                                            <span className="capitalize">{stat}</span>
+                                                            <span className="font-orbitron text-blue-300">{value}</span>
+                                                        </div>
+                                                    ))}
+                                                    <hr className="border-gray-700 my-4"/>
+                                                    <div className="flex justify-between items-center">
+                                                        <span>Points</span>
+                                                        <span className="font-orbitron text-yellow-300">{user.points} P</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+
+                                    {activeTab === 'leaderboard' && <LeaderboardFiltersView />}
+                                    {activeTab === 'chat' && <AnnouncementsView />}
+                                    {activeTab === 'friends' && <RecentChatsView setSelectedFriend={setSelectedFriend} setShowDMOverlay={setShowDMOverlay} />}
+                                    {activeTab === 'shop' && <InventoryView setSystemMessage={setSystemMessage} />}
+                                </div>
+                                <div className="min-h-[100px] flex flex-col justify-end">
+                                    <SystemMessage message={systemMessage} onDismiss={() => setSystemMessage(null)} />
+                                    <button onClick={logout} className="w-full font-orbitron p-3 bg-red-800/50 hover:bg-red-700/50 rounded-md transition duration-300 text-white text-lg">Log Out</button>
+                                </div>
+                            </div>
+                        )}
+                        {activeTab === 'profile' && (
+                            <div className="mt-4 flex flex-col items-center">
+                                <SystemMessage message={systemMessage} onDismiss={() => setSystemMessage(null)} />
+                                <button onClick={logout} className="max-w-lg w-full py-3 font-orbitron bg-red-800/50 hover:bg-red-700/50 rounded-md transition duration-300 text-white text-lg mt-4">Log Out</button>
+                            </div>
+                        )}
+                    </main>
+                    {levelUp && <SystemNotifyBar level={levelUp.level} onComplete={() => setLevelUp(false)} isTransition={levelUp.isTransition} transitionData={levelUp.transitionData} />}
+                    
+                    {/* DM Overlay */}
+                    <div className={`fixed top-0 right-0 h-full w-96 bg-gray-900 border-l border-gray-700 z-50 transform transition-transform duration-300 ease-in-out ${
+                        showDMOverlay ? 'translate-x-0' : 'translate-x-full'
+                    }`}>
+                        <div className="p-4 h-full flex flex-col">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="font-orbitron text-xl text-purple-400">
+                                    {selectedFriend ? `Message ${selectedFriend.username}` : 'Direct Messages'}
+                                </h2>
+                                <button onClick={() => setShowDMOverlay(false)} className="text-gray-400 hover:text-white">
+                                    ✕
+                                </button>
+                            </div>
+                            {selectedFriend && (
+                                <OnlineStatus friendId={selectedFriend._id} />
+                            )}
+                            <DMView selectedFriend={selectedFriend} setSelectedFriend={setSelectedFriend} isOverlay={true} />
+                        </div>
+                    </div>
+                    
+                    {/* Overlay backdrop */}
+                    {showDMOverlay && (
+                        <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowDMOverlay(false)}></div>
+                    )}
+                </div>
+            );
+        };
+        const App = () => { const { isAuthenticated, loading } = useAuth(); if (loading) return <LoadingSpinner />; return isAuthenticated ? <Dashboard /> : <AuthPage />; };
+        ReactDOM.createRoot(document.getElementById('root')).render(<AuthProvider><App /></AuthProvider>);
+    </script>
+</body>
+</html>
