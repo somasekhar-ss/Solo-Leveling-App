@@ -36,16 +36,21 @@ console.log('[Config] Environment variables loaded successfully');
 console.log('[Config] MONGO_URI exists:', !!process.env.MONGO_URI);
 console.log('[Config] JWT_SECRET exists:', !!process.env.JWT_SECRET);
 
-// Enhanced database connection with retry logic
+// Direct MongoDB connection to bypass any config issues
+const mongoose = require('mongoose');
+
 const initializeDatabase = async () => {
     let retries = 5;
     while (retries > 0) {
         try {
-            await connectDB();
+            console.log('[Database] Attempting direct MongoDB connection...');
+            // Direct connection with absolutely no options
+            await mongoose.connect(process.env.MONGO_URI);
             console.log('[Database] Successfully connected to MongoDB');
             break;
         } catch (error) {
             console.error(`[Database] Connection failed. Retries left: ${retries - 1}`);
+            console.error('[Database] Error:', error.message);
             retries--;
             if (retries === 0) {
                 console.error('[Database] Failed to connect after 5 attempts. Exiting...');

@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 
+// Disable any global mongoose defaults that might cause issues
+mongoose.set('strictQuery', false);
+
 const connectDB = async () => {
   try {
     // Validate MONGO_URI before attempting connection
@@ -10,32 +13,8 @@ const connectDB = async () => {
     console.log('[Database] Attempting to connect to MongoDB...');
     console.log('[Database] MONGO_URI length:', process.env.MONGO_URI.length);
     
-    // Try with minimal options first
-    let conn;
-    try {
-      conn = await mongoose.connect(process.env.MONGO_URI, {
-        maxPoolSize: 10,
-        serverSelectionTimeoutMS: 10000,
-        socketTimeoutMS: 45000,
-      });
-    } catch (optionsError) {
-      console.log('[Database] Retrying with no options due to:', optionsError.message);
-      // Fallback: connect with no options at all
-      conn = await mongoose.connect(process.env.MONGO_URI);
-    }
-    
-    // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('[Database] MongoDB connection error:', err);
-    });
-    
-    mongoose.connection.on('disconnected', () => {
-      console.warn('[Database] MongoDB disconnected');
-    });
-    
-    mongoose.connection.on('reconnected', () => {
-      console.log('[Database] MongoDB reconnected');
-    });
+    // Ultra-simple connection with NO options to avoid any deprecated option errors
+    const conn = await mongoose.connect(process.env.MONGO_URI);
     
     console.log(`[Database] MongoDB Connection Established: ${conn.connection.host}`);
   } catch (error) {
