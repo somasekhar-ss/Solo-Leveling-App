@@ -65,7 +65,7 @@ const server = http.createServer(app); // Create an HTTP server from our Express
 const io = new Server(server, {
     cors: {
         origin: process.env.NODE_ENV === 'production' 
-            ? [process.env.FRONTEND_URL || "https://your-app-name.railway.app"]
+            ? [process.env.FRONTEND_URL || "https://solo-leveling.up.railway.app"]
             : "*",
         methods: ["GET", "POST"]
     },
@@ -79,7 +79,7 @@ const io = new Server(server, {
 
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
-        ? [process.env.FRONTEND_URL || "https://your-app-name.railway.app"]
+        ? [process.env.FRONTEND_URL || "https://solo-leveling.up.railway.app"]
         : "*"
 }));
 

@@ -10,14 +10,19 @@ const connectDB = async () => {
     console.log('[Database] Attempting to connect to MongoDB...');
     console.log('[Database] MONGO_URI length:', process.env.MONGO_URI.length);
     
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
-      // Production-ready options (updated for latest Mongoose)
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 10000, // Keep trying to send operations for 10 seconds
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-      connectTimeoutMS: 10000, // Give up initial connection after 10 seconds
-      maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
-    });
+    // Try with minimal options first
+    let conn;
+    try {
+      conn = await mongoose.connect(process.env.MONGO_URI, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+      });
+    } catch (optionsError) {
+      console.log('[Database] Retrying with no options due to:', optionsError.message);
+      // Fallback: connect with no options at all
+      conn = await mongoose.connect(process.env.MONGO_URI);
+    }
     
     // Handle connection events
     mongoose.connection.on('error', (err) => {
