@@ -36,27 +36,41 @@ console.log('[Config] Environment variables loaded successfully');
 console.log('[Config] MONGO_URI exists:', !!process.env.MONGO_URI);
 console.log('[Config] JWT_SECRET exists:', !!process.env.JWT_SECRET);
 
-// Direct MongoDB connection to bypass any config issues
+// EMERGENCY FIX: Force mongoose to use latest connection method
 const mongoose = require('mongoose');
 
+// Clear any existing mongoose configuration
+mongoose.set('strictQuery', false);
+mongoose.set('bufferCommands', false);
+mongoose.set('bufferMaxEntries', 0);
+
 const initializeDatabase = async () => {
-    let retries = 5;
-    while (retries > 0) {
+    try {
+        console.log('[Database] EMERGENCY: Attempting clean MongoDB connection...');
+        
+        // Force disconnect any existing connections
+        if (mongoose.connection.readyState !== 0) {
+            await mongoose.disconnect();
+        }
+        
+        // Connect with explicit modern options
+        await mongoose.connect(process.env.MONGO_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+        
+        console.log('[Database] SUCCESS: MongoDB connected!');
+    } catch (error) {
+        console.error('[Database] EMERGENCY ERROR:', error.message);
+        
+        // Last resort: try with zero options
         try {
-            console.log('[Database] Attempting direct MongoDB connection...');
-            // Direct connection with absolutely no options
+            console.log('[Database] Trying zero-config connection...');
             await mongoose.connect(process.env.MONGO_URI);
-            console.log('[Database] Successfully connected to MongoDB');
-            break;
-        } catch (error) {
-            console.error(`[Database] Connection failed. Retries left: ${retries - 1}`);
-            console.error('[Database] Error:', error.message);
-            retries--;
-            if (retries === 0) {
-                console.error('[Database] Failed to connect after 5 attempts. Exiting...');
-                process.exit(1);
-            }
-            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+            console.log('[Database] SUCCESS: Zero-config connection worked!');
+        } catch (finalError) {
+            console.error('[Database] FINAL ERROR:', finalError.message);
+            process.exit(1);
         }
     }
 };
