@@ -11,6 +11,31 @@ const Message = require('./models/Message');
 
 dotenv.config();
 
+// Load fallback environment variables if Railway env vars are missing
+if (!process.env.MONGO_URI || !process.env.JWT_SECRET) {
+    console.log('[Config] Loading fallback environment variables...');
+    const fallbackEnv = require('./config/env-fallback');
+    Object.keys(fallbackEnv).forEach(key => {
+        if (!process.env[key]) {
+            process.env[key] = fallbackEnv[key];
+        }
+    });
+}
+
+// Validate required environment variables
+const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+    console.error('[Config] Missing required environment variables:', missingEnvVars);
+    console.error('[Config] Available env vars:', Object.keys(process.env).filter(key => key.includes('MONGO') || key.includes('JWT')));
+    process.exit(1);
+}
+
+console.log('[Config] Environment variables loaded successfully');
+console.log('[Config] MONGO_URI exists:', !!process.env.MONGO_URI);
+console.log('[Config] JWT_SECRET exists:', !!process.env.JWT_SECRET);
+
 // Enhanced database connection with retry logic
 const initializeDatabase = async () => {
     let retries = 5;
